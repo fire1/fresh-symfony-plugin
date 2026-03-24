@@ -1,0 +1,10 @@
+{
+  "name": "symfony",
+  "version": "1.0.0",
+  "description": "Symfony framework support for Fresh editor",
+  "type": "plugin",
+  "author": "Angel Zaprianov fire1@abv.bg",
+  "license": "MIT",
+  "keywords": ["symfony", "php", "phpactor", "framework"],
+  "main": "symfony.ts"
+}
