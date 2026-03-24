@@ -62,14 +62,14 @@ function lines(text: string): string[] {
  * Auto-detect the Symfony container XML file.
  * Handles any kernel prefix e.g. App_Kernel, Tomato_Kernel, etc.
  */
-async function findContainerXml(root: string): Promise<string | null> {
+function findContainerXml(root: string): string | null {
   try {
-    const cacheDir = `${root}/var/cache/dev`;
-    const entries = await editor.readDir(cacheDir);
+    const cacheDir = editor.pathJoin([root, "var", "cache", "dev"]);
+    const entries = editor.readDir(cacheDir);
     const found = entries.find(
       (e) => e.is_file && e.name.endsWith("_KernelDevDebugContainer.xml")
     );
-    return found ? `${cacheDir}/${found.name}` : null;
+    return found ? editor.pathJoin([cacheDir, found.name]) : null;
   } catch {
     return null;
   }
@@ -81,7 +81,7 @@ async function findContainerXml(root: string): Promise<string | null> {
  */
 async function readAppEnv(root: string): Promise<string> {
   try {
-    const envPath = `${root}/.env`;
+    const envPath = editor.pathJoin([root, ".env"]);
     if (!editor.fileExists(envPath)) return "dev";
     const content = await editor.readFile(envPath);
     const match = content.match(/^APP_ENV=(.+)$/m);
@@ -443,7 +443,7 @@ globalThis.symfony_tail_log = async function (): Promise<void> {
   ]);
   if (!env) return;
 
-  const logPath = `${root}/var/log/${env}.log`;
+  const logPath = editor.pathJoin([root, "var", "log", `${env}.log`]);
   if (!editor.fileExists(logPath)) {
     editor.setStatus(`Symfony: log file not found — ${logPath}`);
     return;
@@ -521,10 +521,9 @@ editor.registerCommand(
 // ---------------------------------------------------------------------------
 
 async function regeneratePhpactorConfig(root: string): Promise<string | null> {
-  const xmlPath = await findContainerXml(root);
+  const xmlPath = findContainerXml(root);
   if (!xmlPath) return null;
 
-  // Use a path relative to project root for portability
   const relativeXmlPath = xmlPath.replace(`${root}/`, "");
 
   const config = {
@@ -546,10 +545,14 @@ async function regeneratePhpactorConfig(root: string): Promise<string | null> {
     "language_server_phpstan.enabled": false,
   };
 
-  await editor.writeFile(
-    `${root}/.phpactor.json`,
-    JSON.stringify(config, null, 2)
-  );
+  const configPath = editor.pathJoin([root, ".phpactor.json"]);
+  const content = JSON.stringify(config, null, 2);
+
+  // writeFile fails if file exists — delete first
+  if (editor.fileExists(configPath)) {
+    await editor.spawnProcess("rm", [configPath], null);
+  }
+  await editor.writeFile(configPath, content);
 
   return relativeXmlPath;
 }
@@ -575,8 +578,8 @@ globalThis.symfony_setup_lsp = async function (): Promise<void> {
 
   // Step 3 — fix file permissions so phpactor can read all PHP files
   editor.setStatus("Symfony LSP setup: fixing file permissions…");
-  await editor.spawnProcess("chmod", ["-R", "a+r", `${root}/src`], null);
-  await editor.spawnProcess("chmod", ["-R", "a+r", `${root}/vendor`], null);
+  await editor.spawnProcess("chmod", ["-R", "a+r", editor.pathJoin([root, "src"])], null);
+  await editor.spawnProcess("chmod", ["-R", "a+r", editor.pathJoin([root, "vendor"])], null);
 
   // Step 4 — rebuild phpactor index
   editor.setStatus("Symfony LSP setup: building phpactor index (this may take a moment)…");
@@ -614,11 +617,11 @@ globalThis.symfony_fix_permissions = async function (): Promise<void> {
 
   editor.setStatus("Symfony: fixing file permissions…");
 
-  await editor.spawnProcess("chmod", ["-R", "a+r", `${root}/src`], null);
-  await editor.spawnProcess("chmod", ["-R", "a+r", `${root}/vendor`], null);
+  await editor.spawnProcess("chmod", ["-R", "a+r", editor.pathJoin([root, "src"])], null);
+  await editor.spawnProcess("chmod", ["-R", "a+r", editor.pathJoin([root, "vendor"])], null);
 
-  if (editor.fileExists(`${root}/lib`)) {
-    await editor.spawnProcess("chmod", ["-R", "a+r", `${root}/lib`], null);
+  if (editor.fileExists(editor.pathJoin([root, "lib"]))) {
+    await editor.spawnProcess("chmod", ["-R", "a+r", editor.pathJoin([root, "lib"])], null);
   }
 
   editor.setStatus("✓ Symfony: permissions fixed — phpactor can now read all files");
