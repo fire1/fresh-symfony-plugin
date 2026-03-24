@@ -1,4 +1,4 @@
-# Symfony Plugin for Fresh Editor v2
+# Symfony Plugin for Fresh Editor (in dev)
 
 Symfony framework support for [Fresh](https://getfresh.dev) — the terminal text editor.
 
