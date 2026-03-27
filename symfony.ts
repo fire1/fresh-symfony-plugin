@@ -65,7 +65,9 @@ function lines(text: string): string[] {
 function findContainerXml(root: string): string | null {
   try {
     const cacheDir = editor.pathJoin([root, "var", "cache", "dev"]);
-    const entries = editor.readDir(cacheDir);
+    const raw = editor.readDir(cacheDir);
+    const entries: { name: string; is_file: boolean }[] =
+      typeof raw === "string" ? JSON.parse(raw) : raw;
     const found = entries.find(
       (e) => e.is_file && e.name.endsWith("_KernelDevDebugContainer.xml")
     );
